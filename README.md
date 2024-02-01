@@ -117,7 +117,11 @@ Done as part of `prometheus-community/kube-prometheus-stack` helm chart.
 
 ### Dashboard
 
+A test dashboard has been created using data sources from Loki and Prometheus.
 
+Dashboard json is located [here](./grafana/test_dashboard_v1.json)
+
+![Dashboard Test](./grafana/Screenshot2024-02-01at11.02.52.png)
 
 ## Loki Grafana
 
