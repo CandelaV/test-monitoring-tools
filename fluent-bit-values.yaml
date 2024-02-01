@@ -7,10 +7,10 @@ kind: DaemonSet
 replicaCount: 1
 
 image:
-  repository: cr.fluentbit.io/fluent/fluent-bit
+  repository: grafana/fluent-bit-plugin-loki
   # Overrides the image tag whose default is {{ .Chart.AppVersion }}
   # Set to "-" to not use the default value
-  tag:
+  tag: main-e2ed1c0
   digest:
   pullPolicy: Always
 
@@ -298,7 +298,10 @@ terminationGracePeriodSeconds:
 
 priorityClassName: ""
 
-env: []
+env:
+  # Note that for security reasons you should fetch the credentials through a Kubernetes Secret https://kubernetes.io/docs/concepts/configuration/secret/ . You may use the envFrom for this.
+  - name: FLUENT_LOKI_URL
+    value: http://loki-gateway:80/loki/api/v1/push
 #  - name: FOO
 #    value: "bar"
 
@@ -390,20 +393,17 @@ config:
 
   ## https://docs.fluentbit.io/manual/pipeline/outputs
   outputs: |
-    [OUTPUT]
-        Name es
+    [Output]
+        Name grafana-loki
         Match kube.*
-        Host elasticsearch-master
-        Logstash_Format On
-        Retry_Limit False
-
-    [OUTPUT]
-        Name es
-        Match host.*
-        Host elasticsearch-master
-        Logstash_Format On
-        Logstash_Prefix node
-        Retry_Limit False
+        Url ${FLUENT_LOKI_URL}
+        Labels {job="fluent-bit"}
+        LabelKeys level,app # this sets the values for actual Loki streams and the other labels are converted to structured_metadata https://grafana.com/docs/loki/latest/get-started/labels/structured-metadata/
+        BatchWait 1
+        BatchSize 1001024
+        LineFormat json
+        LogLevel info
+        AutoKubernetesLabels true
 
   ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/upstream-servers
   ## This configuration is deprecated, please use `extraFiles` instead.
@@ -466,6 +466,8 @@ command:
   - /fluent-bit/bin/fluent-bit
 
 args:
+  - "-e"
+  - "/fluent-bit/bin/out_grafana_loki.so"
   - --workdir=/fluent-bit/etc
   - --config=/fluent-bit/etc/conf/fluent-bit.conf
 
